@@ -5,7 +5,6 @@ attribute highp vec2 a_pos;
 attribute highp vec2 a_uv;
 
 varying vec2 v_uv;
-varying vec3 v_color;
 
 void main()
 {
