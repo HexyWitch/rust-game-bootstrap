@@ -1,9 +1,12 @@
 use anyhow::{format_err, Error};
 
+pub type TextureRect = [u32; 4];
+
 pub struct TextureAtlas {
     size: (u32, u32),
     texture_rects: Vec<[u32; 4]>,
 }
+
 impl TextureAtlas {
     pub fn new(size: (u32, u32)) -> TextureAtlas {
         TextureAtlas {

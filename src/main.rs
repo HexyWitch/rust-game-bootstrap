@@ -1,16 +1,17 @@
 #[allow(unused)]
 mod gl;
+mod graphics;
 mod input;
 mod mixer;
 mod platform;
 mod texture_atlas;
 
 use euclid::{
-    default::{Rect, Transform2D, Vector2D},
-    point2, size2, vec2,
+    default::{Transform2D, Vector2D},
+    point2, vec2,
 };
-use zerocopy::AsBytes;
 
+use graphics::{load_image, render_sprite, Sprite, Vertex, TEXTURE_ATLAS_SIZE};
 use input::{InputEvent, Key};
 
 fn main() {
@@ -65,31 +66,27 @@ fn main() {
                 .unwrap()
         };
 
-        let logo_image = image::load_from_memory(include_bytes!("../assets/embla_logo.png"))
-            .unwrap()
-            .to_rgba();
-
         let mut texture = unsafe {
             gl_context
-                .create_texture(gl::TextureFormat::RGBAFloat, 1024, 1024)
+                .create_texture(
+                    gl::TextureFormat::RGBAFloat,
+                    TEXTURE_ATLAS_SIZE.width,
+                    TEXTURE_ATLAS_SIZE.height,
+                )
                 .unwrap()
         };
-        let mut atlas = texture_atlas::TextureAtlas::new((1024, 1024));
+        let mut atlas =
+            texture_atlas::TextureAtlas::new((TEXTURE_ATLAS_SIZE.width, TEXTURE_ATLAS_SIZE.height));
 
-        let logo_width = logo_image.width();
-        let logo_height = logo_image.height();
-        let logo_uv = atlas
-            .add_texture((logo_image.width(), logo_image.height()))
-            .unwrap();
-        unsafe {
-            texture.write(
-                logo_uv[0],
-                logo_uv[1],
-                logo_uv[2] - logo_uv[0],
-                logo_uv[3] - logo_uv[1],
-                &logo_image.into_raw(),
+        let logo_rect = unsafe {
+            load_image(
+                include_bytes!("../assets/embla_logo.png"),
+                &mut atlas,
+                &mut texture,
             )
-        };
+        }
+        .unwrap();
+        let logo_sprite = Sprite::new(logo_rect, 1, point2(0., 0.));
 
         let transform = Transform2D::create_scale(1.0 / 800.0, 1.0 / 600.0)
             .post_scale(2., 2.)
@@ -166,54 +163,17 @@ fn main() {
             if dir.length() > 0. {
                 position += dir.normalize() * 50. * dt;
             }
-            let rect = Rect::new(position, size2(logo_width as f32, logo_height as f32));
-            let uv_rect = Rect::new(
-                point2(logo_uv[0] as f32 / 1024., logo_uv[1] as f32 / 1024.),
-                size2(
-                    (logo_uv[2] - logo_uv[0]) as f32 / 1024.,
-                    (logo_uv[3] - logo_uv[1]) as f32 / 1024.,
-                ),
-            );
+
+            let mut vertices = Vec::new();
+            render_sprite(&logo_sprite, 0, position, &mut vertices);
 
             unsafe {
                 gl_context.clear([0.0, 0.0, 0.0, 1.0]);
 
-                vertex_buffer.write(&[
-                    Vertex {
-                        position: rect.min().to_array(),
-                        uv: [uv_rect.min_x(), uv_rect.max_y()],
-                    },
-                    Vertex {
-                        position: [rect.max_x(), rect.min_y()],
-                        uv: uv_rect.max().to_array(),
-                    },
-                    Vertex {
-                        position: [rect.min_x(), rect.max_y()],
-                        uv: uv_rect.min().to_array(),
-                    },
-                    Vertex {
-                        position: [rect.max_x(), rect.min_y()],
-                        uv: uv_rect.max().to_array(),
-                    },
-                    Vertex {
-                        position: rect.max().to_array(),
-                        uv: [uv_rect.max_x(), uv_rect.min_y()],
-                    },
-                    Vertex {
-                        position: [rect.min_x(), rect.max_y()],
-                        uv: uv_rect.min().to_array(),
-                    },
-                ]);
+                vertex_buffer.write(&vertices);
 
                 program.render_vertices(&vertex_buffer).unwrap();
             }
         }
     })
-}
-
-#[repr(C)]
-#[derive(AsBytes)]
-struct Vertex {
-    position: [f32; 2],
-    uv: [f32; 2],
 }
