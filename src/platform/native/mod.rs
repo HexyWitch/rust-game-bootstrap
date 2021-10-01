@@ -63,6 +63,12 @@ pub fn run<
             } => {
                 log::info!("Resize to {:?}", size);
             }
+            event::Event::WindowEvent {
+                event: WindowEvent::CloseRequested,
+                ..
+            } => {
+                *control_flow = ControlFlow::Exit;
+            }
             event::Event::WindowEvent { event, .. } => match event {
                 WindowEvent::KeyboardInput {
                     input:

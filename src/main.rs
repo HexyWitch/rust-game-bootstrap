@@ -1,7 +1,10 @@
+mod constants;
 #[allow(unused)]
 mod gl;
+#[allow(unused)]
 mod graphics;
 mod input;
+#[allow(unused)]
 mod mixer;
 mod platform;
 mod texture_atlas;
@@ -13,6 +16,8 @@ use euclid::{
 
 use graphics::{load_image, render_sprite, Sprite, Vertex, TEXTURE_ATLAS_SIZE};
 use input::{InputEvent, Key};
+
+use crate::gl::RenderTarget;
 
 fn main() {
     platform::run("My game", (800, 600), |gl_context: &mut gl::Context| {
@@ -60,6 +65,12 @@ fn main() {
                                 size: 2,
                                 offset: 2 * 4,
                             },
+                            gl::VertexAttribute {
+                                name: "a_color",
+                                ty: gl::VertexAttributeType::Float,
+                                size: 4,
+                                offset: 4 * 4,
+                            },
                         ],
                     },
                 })
@@ -88,9 +99,9 @@ fn main() {
         .unwrap();
         let logo_sprite = Sprite::new(logo_rect, 1, point2(0., 0.));
 
-        let transform = Transform2D::create_scale(1.0 / 800.0, 1.0 / 600.0)
-            .post_scale(2., 2.)
-            .post_translate(vec2(-1.0, -1.0));
+        let transform = Transform2D::scale(1.0 / 800.0, 1.0 / 600.0)
+            .then_scale(2., 2.)
+            .then_translate(vec2(-1.0, -1.0));
         program
             .set_uniform(
                 0,
@@ -165,14 +176,16 @@ fn main() {
             }
 
             let mut vertices = Vec::new();
-            render_sprite(&logo_sprite, 0, position, &mut vertices);
+            render_sprite(&logo_sprite, 0, position, [1., 1., 1., 1.], &mut vertices);
 
             unsafe {
-                gl_context.clear([0.0, 0.0, 0.0, 1.0]);
+                gl_context.clear(RenderTarget::Screen, [0.0, 0.0, 0.0, 1.0]);
 
                 vertex_buffer.write(&vertices);
 
-                program.render_vertices(&vertex_buffer).unwrap();
+                program
+                    .render_vertices(&vertex_buffer, RenderTarget::Screen)
+                    .unwrap();
             }
         }
     })

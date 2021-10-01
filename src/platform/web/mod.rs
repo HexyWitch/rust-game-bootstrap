@@ -13,14 +13,11 @@ use crate::{
 
 pub use audio::start_audio_playback;
 
-pub fn run<
+pub fn run<F, U>(title: &str, size: (u32, u32), f: F)
+where
     F: Fn(&mut gl::Context) -> U,
     U: FnMut(f32, &[InputEvent], &mut gl::Context) + 'static,
->(
-    title: &str,
-    size: (u32, u32),
-    f: F,
-) {
+{
     use std::cell::RefCell;
 
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
